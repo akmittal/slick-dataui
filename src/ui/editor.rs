@@ -75,6 +75,11 @@ fn render_run_button(
                             match result {
                                 Ok(res) => {
                                     state.query_results = Some(res);
+                                    state.result_id += 1;
+                                    state.current_query = Some(query.clone());
+                                    state.current_table = None; // Custom query, not a simple table
+                                    state.sort_column = None;
+                                    state.sort_ascending = true;
                                 }
                                 Err(e) => {
                                     state.error_message = Some(format!("Query failed: {}", e))
@@ -107,17 +112,20 @@ pub fn render_query_results(
         )
         .child(if let Some(table_state) = &layout.table_state {
             // Use the table state that was created in MainLayout::render
+            use gpui::prelude::*;
+            use gpui_component::StyledExt;
+            use gpui_component::scroll::ScrollbarAxis;
+
             div()
                 .flex_1()
+                .h(px(400.)) // Fixed height to enable scrolling
+                .max_w_full()
                 .flex()
                 .flex_col()
                 .gap_2()
-                .child(
-                    Table::new(table_state)
-                        .stripe(true)
-                        .bordered(true)
-                        .scrollbar_visible(true, true),
-                )
+                .gap_2()
+                .scrollable(ScrollbarAxis::Both)
+                .child(Table::new(table_state).stripe(true).bordered(true))
                 .child(
                     if let Some(results) = &layout.state.0.read(cx).query_results {
                         div()
@@ -137,7 +145,7 @@ pub fn render_query_results(
                         div().into_element()
                     },
                 )
-                .into_element()
+                .into_any_element()
         } else if layout.state.0.read(cx).query_results.is_some() {
             // Results exist but table not ready yet
             div()
@@ -147,7 +155,7 @@ pub fn render_query_results(
                 .justify_center()
                 .text_color(rgb(0x888888))
                 .child("Loading table...")
-                .into_element()
+                .into_any_element()
         } else {
             div()
                 .flex_1()
@@ -156,6 +164,6 @@ pub fn render_query_results(
                 .justify_center()
                 .text_color(rgb(0x888888))
                 .child("No results yet. Run a query to see results here.")
-                .into_element()
+                .into_any_element()
         })
 }

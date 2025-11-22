@@ -22,6 +22,11 @@ pub struct AppState {
     pub active_connection_name: Option<String>,
     pub tables: Vec<Table>,
     pub query_results: Option<QueryResult>,
+    pub result_id: usize,
+    pub current_query: Option<String>,
+    pub current_table: Option<String>,
+    pub sort_column: Option<String>,
+    pub sort_ascending: bool,
     pub is_connecting: bool,
     pub error_message: Option<String>,
 }
@@ -37,8 +42,13 @@ impl AppState {
             connections,
             active_connection: None,
             active_connection_name: None,
-            tables: vec![],
+            tables: Vec::new(),
             query_results: None,
+            result_id: 0,
+            current_query: None,
+            current_table: None,
+            sort_column: None,
+            sort_ascending: true,
             is_connecting: false,
             error_message: None,
         }
@@ -62,6 +72,7 @@ impl Render for AppState {
     }
 }
 
+#[derive(Clone)]
 pub struct GlobalAppState(pub Entity<AppState>);
 
 impl GlobalAppState {

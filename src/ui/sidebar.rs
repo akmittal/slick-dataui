@@ -195,7 +195,14 @@ fn render_tables_list(
                                     let result = client.execute_query(&query).await;
                                     let _ = app_state.update(&mut cx, |state, cx| {
                                         match result {
-                                            Ok(res) => state.query_results = Some(res),
+                                            Ok(res) => {
+                                                state.query_results = Some(res);
+                                                state.result_id += 1;
+                                                state.current_query = Some(query.clone());
+                                                state.current_table = Some(table_name.clone());
+                                                state.sort_column = None;
+                                                state.sort_ascending = true;
+                                            }
                                             Err(e) => {
                                                 state.error_message = Some(format!(
                                                     "Failed to fetch table data: {}",

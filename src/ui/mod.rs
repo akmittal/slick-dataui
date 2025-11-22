@@ -25,6 +25,7 @@ pub struct MainLayout {
     pub form: ConnectionForm,
     pub query_input: Entity<InputState>,
     pub table_state: Option<Entity<TableState<QueryResultsDelegate>>>,
+    pub last_result_id: usize,
 }
 
 impl MainLayout {
@@ -49,6 +50,7 @@ impl MainLayout {
             form: ConnectionForm::new(window, cx),
             query_input,
             table_state: None,
+            last_result_id: 0,
         }
     }
 }
@@ -56,12 +58,25 @@ impl MainLayout {
 impl Render for MainLayout {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Create or recreate table state when results change
-        if let Some(results) = self.state.0.read(cx).query_results.clone() {
-            let delegate = QueryResultsDelegate::new(results);
-            let state = cx.new(|cx| TableState::new(delegate, window, cx));
-            self.table_state = Some(state);
-        } else {
-            self.table_state = None;
+        let current_result_id = self.state.0.read(cx).result_id;
+        if current_result_id != self.last_result_id {
+            self.last_result_id = current_result_id;
+            let app_state = self.state.0.read(cx);
+            if let Some(results) = app_state.query_results.clone() {
+                let sort_column = app_state.sort_column.clone();
+                let sort_ascending = app_state.sort_ascending;
+
+                let delegate = QueryResultsDelegate::new(
+                    results,
+                    self.state.clone(),
+                    sort_column,
+                    sort_ascending,
+                );
+                let state = cx.new(|cx| TableState::new(delegate, window, cx));
+                self.table_state = Some(state);
+            } else {
+                self.table_state = None;
+            }
         }
 
         div()
