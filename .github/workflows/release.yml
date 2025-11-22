@@ -7,6 +7,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+permissions:
+  contents: write
+
 jobs:
   test:
     name: Test
@@ -79,8 +82,6 @@ jobs:
         name: Latest Build
         draft: false
         prerelease: false
-        files: |
-          ${{ matrix.asset_name }}.tar.gz
-          ${{ matrix.asset_name }}.zip
+        files: ${{ matrix.asset_name }}.*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
