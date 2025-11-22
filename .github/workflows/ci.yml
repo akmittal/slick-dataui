@@ -6,6 +6,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0  # Disable incremental compilation for CI (faster)
+  CARGO_NET_RETRY: 10
+  RUST_BACKTRACE: short
 
 jobs:
   check:
@@ -29,23 +32,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxcursor-dev libxi-dev
 
-    - name: Cache Cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
 
     - name: Check formatting
-      if: runner.os == 'Ubuntu' # Only check fmt once
+      if: runner.os == 'Linux' # Only check fmt once
       run: cargo fmt -- --check
 
     - name: Lint with Clippy
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --locked -- -D warnings
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --locked --verbose
+
