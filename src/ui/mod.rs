@@ -5,18 +5,17 @@
 /// - editor: SQL query editor
 /// - results: Query results display
 /// - main_layout: Main UI layout orchestrator
-
 pub mod connection_modal;
-pub mod sidebar;
 pub mod editor;
 pub mod results;
+pub mod sidebar;
 
+use crate::state::GlobalAppState;
+use crate::table_delegate::QueryResultsDelegate;
 use gpui::prelude::*;
 use gpui::*;
-use crate::state::GlobalAppState;
 use gpui_component::input::InputState;
 use gpui_component::table::TableState;
-use crate::table_delegate::QueryResultsDelegate;
 
 pub use connection_modal::ConnectionForm;
 
@@ -73,12 +72,10 @@ impl Render for MainLayout {
             .text_color(rgb(0xffffff))
             .child(sidebar::render_sidebar(self, cx))
             .child(editor::render_editor_section(self, cx))
-            .children(
-                if self.state.0.read(cx).is_connecting {
-                    Some(connection_modal::render_modal(self, cx))
-                } else {
-                    None
-                },
-            )
+            .children(if self.state.0.read(cx).is_connecting {
+                Some(connection_modal::render_modal(self, cx))
+            } else {
+                None
+            })
     }
 }

@@ -1,9 +1,9 @@
+use crate::state::{ConnectionConfig, DatabaseType};
 use anyhow::Result;
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::state::{ConnectionConfig, DatabaseType};
 
 const SERVICE_NAME: &str = "com.slick-dataui.app";
 const CONFIG_DIR_NAME: &str = "slick-dataui";
@@ -22,11 +22,11 @@ fn get_config_dir() -> Result<PathBuf> {
     let config_dir = dirs::config_dir()
         .ok_or_else(|| anyhow::anyhow!("Could not find config directory"))?
         .join(CONFIG_DIR_NAME);
-    
+
     if !config_dir.exists() {
         fs::create_dir_all(&config_dir)?;
     }
-    
+
     Ok(config_dir)
 }
 
@@ -37,13 +37,16 @@ fn get_connections_file_path() -> Result<PathBuf> {
 pub fn save_connections(connections: &[ConnectionConfig]) -> Result<()> {
     println!("Saving {} connections...", connections.len());
     // 1. Save metadata to JSON
-    let metadata: Vec<ConnectionMetadata> = connections.iter().map(|c| ConnectionMetadata {
-        name: c.name.clone(),
-        db_type: c.db_type.clone(),
-        // We store the password here as a fallback. 
-        // In a production app, we would encrypt this or strictly enforce keyring.
-        unsafe_password: Some(c.connection_string.clone()),
-    }).collect();
+    let metadata: Vec<ConnectionMetadata> = connections
+        .iter()
+        .map(|c| ConnectionMetadata {
+            name: c.name.clone(),
+            db_type: c.db_type.clone(),
+            // We store the password here as a fallback.
+            // In a production app, we would encrypt this or strictly enforce keyring.
+            unsafe_password: Some(c.connection_string.clone()),
+        })
+        .collect();
 
     let file_path = get_connections_file_path()?;
     let json = serde_json::to_string_pretty(&metadata)?;
@@ -53,11 +56,14 @@ pub fn save_connections(connections: &[ConnectionConfig]) -> Result<()> {
     for conn in connections {
         println!("Saving password for '{}'", conn.name);
         let entry = Entry::new(SERVICE_NAME, &conn.name);
-        
-        if let Ok(entry) = entry {
-             if let Err(e) = entry.set_password(&conn.connection_string) {
-                eprintln!("Failed to save password to keyring for '{}': {}", conn.name, e);
-            }
+
+        if let Ok(entry) = entry
+            && let Err(e) = entry.set_password(&conn.connection_string)
+        {
+            eprintln!(
+                "Failed to save password to keyring for '{}': {}",
+                conn.name, e
+            );
         }
     }
 
@@ -85,12 +91,12 @@ pub fn load_connections() -> Result<Vec<ConnectionConfig>> {
 
         // Try Keyring first
         let entry = Entry::new(SERVICE_NAME, &meta.name);
-        if let Ok(entry) = entry {
-            if let Ok(p) = entry.get_password() {
-                password = p;
-                found_in_keyring = true;
-                println!("Loaded password for '{}' from Keyring", meta.name);
-            }
+        if let Ok(entry) = entry
+            && let Ok(p) = entry.get_password()
+        {
+            password = p;
+            found_in_keyring = true;
+            println!("Loaded password for '{}' from Keyring", meta.name);
         }
 
         // Fallback to JSON if not found in keyring
@@ -99,7 +105,10 @@ pub fn load_connections() -> Result<Vec<ConnectionConfig>> {
                 password = unsafe_pass;
                 println!("Loaded password for '{}' from JSON fallback", meta.name);
             } else {
-                eprintln!("Failed to get password for connection {}: Not in Keyring or JSON", meta.name);
+                eprintln!(
+                    "Failed to get password for connection {}: Not in Keyring or JSON",
+                    meta.name
+                );
             }
         }
 
@@ -114,7 +123,6 @@ pub fn load_connections() -> Result<Vec<ConnectionConfig>> {
     Ok(connections)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,7 +134,7 @@ mod tests {
         let password = "test_password";
 
         let entry = Entry::new(service, user).unwrap();
-        
+
         // Clean up potential leftovers
         let _ = entry.delete_credential();
 

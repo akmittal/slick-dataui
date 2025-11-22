@@ -40,6 +40,19 @@ git clone https://github.com/yourusername/slick-dataui.git
 cd slick-dataui
 ```
 
+### Setting Up Git Hooks
+
+The repository includes pre-commit hooks that run `cargo fmt` and `cargo clippy` before each commit. To enable them:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This is already configured if you cloned the repo after this was added. The hooks will:
+- Check code formatting with `cargo fmt --check`
+- Run clippy lints with `cargo clippy -- -D warnings`
+- Prevent commits if either check fails
+
 ### Running the Application
 
 ```bash
