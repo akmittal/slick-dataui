@@ -88,13 +88,16 @@ mod tests {
     #[test]
     fn test_new() {
         let state = AppState::new();
-        assert!(state.connections.is_empty());
+        // Connections might be loaded from disk, so we don't check is_empty()
         assert!(state.active_connection.is_none());
         assert!(state.active_connection_name.is_none());
         assert!(state.tables.is_empty());
         assert!(state.query_results.is_none());
         assert!(!state.is_connecting);
         assert!(state.error_message.is_none());
+        assert_eq!(state.result_id, 0);
+        assert!(state.sort_column.is_none());
+        assert!(state.sort_ascending);
     }
 
     #[test]
