@@ -43,10 +43,20 @@ impl MainLayout {
         C: AppContext,
         C::Result<Entity<InputState>>: Into<Entity<InputState>>
     {
+        // Create SQL code editor with syntax highlighting
+        let query_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .multi_line()
+                .code_editor("sql")  // Enable SQL syntax highlighting
+                .line_number(true)   // Show line numbers
+                .searchable(true)    // Enable Ctrl+F search
+                .placeholder("-- Enter your SQL query here...")
+        }).into();
+        
         Self { 
             state,
             form: ConnectionForm::new(window, cx),
-            query_input: cx.new(|cx| InputState::new(window, cx)).into(),
+            query_input,
         }
     }
 
@@ -368,21 +378,32 @@ impl Render for MainLayout {
                             .border_b_1()
                             .border_color(rgb(0x333333))
                             .p_4()
-                            .child("Query Editor")
+                            .flex()
+                            .flex_col()
+                            .gap_3()
+                            .child(
+                                div()
+                                    .text_sm()
+                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                    .child("SQL Query Editor")
+                            )
                             .child(
                                 div()
                                     .flex()
+                                    .flex_col()
                                     .gap_2()
+                                    .flex_1()
                                     .child(
                                         Input::new(&self.query_input)
+                                            .h(px(150.))  // Multiline height for SQL queries
+                                            .appearance(true)
                                     )
                                     .child(
                                         Button::new("run_query")
+                                            .label("Run Query")
                                             .primary()
-                                            .label("Run")
                                             .on_click(cx.listener(|this, _, _, cx| {
                                                 let app_state = this.state.0.clone();
-                                                // Get query from input
                                                 let query = this.query_input.read(cx).value().to_string();
                                                 
                                                 // Read active connection on main thread
