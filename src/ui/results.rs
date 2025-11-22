@@ -9,6 +9,3 @@
 //! - Column-specific rendering (e.g., JSON, dates)
 
 // Placeholder module for future expansion
-
-
-

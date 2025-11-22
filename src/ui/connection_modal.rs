@@ -1,10 +1,10 @@
+use crate::state::{ConnectionConfig, DatabaseType};
 /// Connection modal component for creating new database connections.
 use gpui::prelude::*;
 use gpui::*;
-use gpui_component::input::{Input, InputState};
 use gpui_component::button::{Button, ButtonVariants};
-use gpui_component::radio::{RadioGroup, Radio};
-use crate::state::{DatabaseType, ConnectionConfig};
+use gpui_component::input::{Input, InputState};
+use gpui_component::radio::{Radio, RadioGroup};
 
 pub struct ConnectionForm {
     pub name_input: Entity<InputState>,
@@ -24,9 +24,7 @@ impl ConnectionForm {
                 .new(|cx| InputState::new(window, cx).placeholder("Connection name"))
                 .into(),
             conn_string_input: cx
-                .new(|cx| {
-                    InputState::new(window, cx).placeholder("Connection string or file")
-                })
+                .new(|cx| InputState::new(window, cx).placeholder("Connection string or file"))
                 .into(),
             db_type: DatabaseType::Sqlite,
             selected_path: None,
@@ -34,7 +32,10 @@ impl ConnectionForm {
     }
 }
 
-pub fn render_modal(layout: &mut super::MainLayout, cx: &mut Context<super::MainLayout>) -> impl IntoElement {
+pub fn render_modal(
+    layout: &mut super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> impl IntoElement {
     div()
         .absolute()
         .size_full()
@@ -56,7 +57,7 @@ pub fn render_modal(layout: &mut super::MainLayout, cx: &mut Context<super::Main
                 .child(render_connection_name_field(layout, cx))
                 .child(render_database_type_selector(layout, cx))
                 .child(render_connection_string_field(layout, cx))
-                .child(render_modal_actions(layout, cx))
+                .child(render_modal_actions(layout, cx)),
         )
 }
 
@@ -127,27 +128,28 @@ fn render_connection_string_field(
                             .label("Browse...")
                             .on_click(cx.listener(|_this, _, _, cx| {
                                 let async_cx = cx.to_async();
-                                cx.spawn(|this: WeakEntity<super::MainLayout>, _: &mut AsyncApp| {
-                                    async move {
-                                        let mut cx = async_cx.clone();
-                                        let file = rfd::AsyncFileDialog::new()
-                                            .add_filter("SQLite Database", &["db", "sqlite", "sqlite3"])
-                                            .pick_file()
-                                            .await;
+                                cx.spawn(
+                                |this: WeakEntity<super::MainLayout>, _: &mut AsyncApp| async move {
+                                    let mut cx = async_cx.clone();
+                                    let file = rfd::AsyncFileDialog::new()
+                                        .add_filter("SQLite Database", &["db", "sqlite", "sqlite3"])
+                                        .pick_file()
+                                        .await;
 
-                                        if let Some(file) = file {
-                                            let path_str = format!("sqlite://{}", file.path().display());
-                                            let _ = this.update(&mut cx, |this, cx| {
-                                                this.form.selected_path = Some(path_str);
-                                                cx.notify();
-                                            });
-                                        }
+                                    if let Some(file) = file {
+                                        let path_str =
+                                            format!("sqlite://{}", file.path().display());
+                                        let _ = this.update(&mut cx, |this, cx| {
+                                            this.form.selected_path = Some(path_str);
+                                            cx.notify();
+                                        });
                                     }
-                                })
-                                .detach();
+                                },
+                            )
+                            .detach();
                             })),
                     )
-                })
+                }),
         )
         .when_some(layout.form.selected_path.as_ref(), |el, path| {
             el.child(

@@ -1,8 +1,8 @@
-use anyhow::Result;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres, Row};
-use sqlx::Column as SqlxColumnTrait;
 use super::TOKIO_RUNTIME;
-use crate::db::{Table, Column, QueryResult, DatabaseClient};
+use crate::db::{Column, DatabaseClient, QueryResult, Table};
+use anyhow::Result;
+use sqlx::Column as SqlxColumnTrait;
+use sqlx::{Pool, Postgres, Row, postgres::PgPoolOptions};
 
 pub struct PostgresClient {
     pool: Pool<Postgres>,
@@ -11,11 +11,9 @@ pub struct PostgresClient {
 impl PostgresClient {
     pub async fn new(url: &str) -> Result<Self> {
         let url = url.to_string();
-        let pool = TOKIO_RUNTIME.spawn(async move {
-            PgPoolOptions::new()
-                .connect(&url)
-                .await
-        }).await??;
+        let pool = TOKIO_RUNTIME
+            .spawn(async move { PgPoolOptions::new().connect(&url).await })
+            .await??;
         Ok(Self { pool })
     }
 }
@@ -61,28 +59,38 @@ impl DatabaseClient for PostgresClient {
     async fn execute_query(&self, query: &str) -> Result<QueryResult> {
         let pool = self.pool.clone();
         let query = query.to_string();
-        TOKIO_RUNTIME.spawn(async move {
-            let rows = sqlx::query(&query)
-                .fetch_all(&pool)
-                .await?;
+        TOKIO_RUNTIME
+            .spawn(async move {
+                let rows = sqlx::query(&query).fetch_all(&pool).await?;
 
-            if rows.is_empty() {
-                return Ok(QueryResult { columns: vec![], rows: vec![] });
-            }
-
-            let columns: Vec<String> = rows[0].columns().iter().map(|c| c.name().to_string()).collect();
-            let mut result_rows = Vec::new();
-
-            for row in rows {
-                let mut current_row = Vec::new();
-                for (i, _) in columns.iter().enumerate() {
-                    let val: String = row.try_get(i).unwrap_or_else(|_| "NULL".to_string());
-                    current_row.push(val);
+                if rows.is_empty() {
+                    return Ok(QueryResult {
+                        columns: vec![],
+                        rows: vec![],
+                    });
                 }
-                result_rows.push(current_row);
-            }
 
-            Ok(QueryResult { columns, rows: result_rows })
-        }).await?
+                let columns: Vec<String> = rows[0]
+                    .columns()
+                    .iter()
+                    .map(|c| c.name().to_string())
+                    .collect();
+                let mut result_rows = Vec::new();
+
+                for row in rows {
+                    let mut current_row = Vec::new();
+                    for (i, _) in columns.iter().enumerate() {
+                        let val: String = row.try_get(i).unwrap_or_else(|_| "NULL".to_string());
+                        current_row.push(val);
+                    }
+                    result_rows.push(current_row);
+                }
+
+                Ok(QueryResult {
+                    columns,
+                    rows: result_rows,
+                })
+            })
+            .await?
     }
 }
