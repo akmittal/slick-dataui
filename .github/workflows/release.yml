@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, macos-14, windows-latest]
     steps:
     - uses: actions/checkout@v4
     - name: Install Rust
@@ -39,9 +39,12 @@ jobs:
           - os: ubuntu-latest
             artifact_name: slick-dataui
             asset_name: slick-dataui-linux-amd64
-          - os: macos-latest
+          - os: macos-13
             artifact_name: slick-dataui
             asset_name: slick-dataui-macos-amd64
+          - os: macos-14
+            artifact_name: slick-dataui
+            asset_name: slick-dataui-macos-aarch64
           - os: windows-latest
             artifact_name: slick-dataui.exe
             asset_name: slick-dataui-windows-amd64.exe
@@ -61,11 +64,18 @@ jobs:
     - name: Build Release
       run: cargo build --release
 
-    - name: Package Binary (Unix)
-      if: runner.os != 'Windows'
+    - name: Package Binary (Linux)
+      if: runner.os == 'Linux'
       run: |
         cd target/release
         tar -czf ../../${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+        cd ../..
+
+    - name: Package Binary (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        cd target/release
+        zip ../../${{ matrix.asset_name }}.zip ${{ matrix.artifact_name }}
         cd ../..
 
     - name: Package Binary (Windows)
