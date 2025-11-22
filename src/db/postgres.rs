@@ -80,7 +80,20 @@ impl DatabaseClient for PostgresClient {
                 for row in rows {
                     let mut current_row = Vec::new();
                     for (i, _) in columns.iter().enumerate() {
-                        let val: String = row.try_get(i).unwrap_or_else(|_| "NULL".to_string());
+                        // Try to get the value as different types and convert to string
+                        let val: String = if let Ok(v) = row.try_get::<i32, _>(i) {
+                            v.to_string()
+                        } else if let Ok(v) = row.try_get::<i64, _>(i) {
+                            v.to_string()
+                        } else if let Ok(v) = row.try_get::<f64, _>(i) {
+                            v.to_string()
+                        } else if let Ok(v) = row.try_get::<String, _>(i) {
+                            v
+                        } else if let Ok(v) = row.try_get::<bool, _>(i) {
+                            v.to_string()
+                        } else {
+                            "NULL".to_string()
+                        };
                         current_row.push(val);
                     }
                     result_rows.push(current_row);
