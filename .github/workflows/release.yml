@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev
+    - name: Run tests
+      run: cargo test --verbose
+
+  release:
+    name: Build & Release
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: slick-dataui
+            asset_name: slick-dataui-linux-amd64
+          - os: macos-latest
+            artifact_name: slick-dataui
+            asset_name: slick-dataui-macos-amd64
+          - os: windows-latest
+            artifact_name: slick-dataui.exe
+            asset_name: slick-dataui-windows-amd64.exe
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev
+
+    - name: Build Release
+      run: cargo build --release
+
+    - name: Package Binary (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cd target/release
+        tar -czf ../../${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+        cd ../..
+
+    - name: Package Binary (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd target/release
+        7z a ../../${{ matrix.asset_name }}.zip ${{ matrix.artifact_name }}
+        cd ../..
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: latest
+        name: Latest Build
+        draft: false
+        prerelease: false
+        files: |
+          ${{ matrix.asset_name }}.tar.gz
+          ${{ matrix.asset_name }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
