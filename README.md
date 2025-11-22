@@ -23,7 +23,8 @@ Slick DataUI is a modern, cross-platform database client built with Rust and GPU
 - **Language**: [Rust](https://www.rust-lang.org/) 🦀
 - **UI Framework**: [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) (The same framework powering the Zed editor)
 - **Database Interface**: [SQLx](https://github.com/launchbadge/sqlx) for async, type-safe database interactions.
-- **Async Runtime**: [Tokio](https://tokio.rs/)
+- **Async Runtime**: [Tokio](https://tokio.rs/) (for database operations)
+- **File Dialogs**: [rfd](https://github.com/PolyMeilex/rfd) for native file picker dialogs
 
 ## Getting Started
 
@@ -50,9 +51,9 @@ cargo run
 1. **Add a Connection**:
    - Click the **+** button in the "Connections" sidebar.
    - Enter a name for your connection.
-   - Enter the connection string:
-     - SQLite: `sqlite://path/to/db.sqlite`
-     - PostgreSQL: `postgres://user:password@host/dbname`
+   - Select the database type (SQLite or PostgreSQL) using the radio buttons.
+   - **For SQLite**: Click the **Browse...** button to open a file picker and select your database file. The connection string will be automatically populated.
+   - **For PostgreSQL**: Manually enter the connection string (e.g., `postgres://user:password@host/dbname`).
    - Click **Save**.
 
 2. **Connect**:

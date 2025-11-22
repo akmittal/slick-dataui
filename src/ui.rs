@@ -13,6 +13,7 @@ pub struct ConnectionForm {
     pub name_input: Entity<InputState>,
     pub conn_string_input: Entity<InputState>,
     pub db_type: DatabaseType,
+    pub selected_path: Option<String>,
 }
 
 impl ConnectionForm {
@@ -25,6 +26,7 @@ impl ConnectionForm {
             name_input: cx.new(|cx| InputState::new(window, cx)).into(),
             conn_string_input: cx.new(|cx| InputState::new(window, cx)).into(),
             db_type: DatabaseType::Sqlite,
+            selected_path: None,
         }
     }
 }
@@ -68,10 +70,134 @@ impl MainLayout {
                     .gap_4()
                     .child(div().text_xl().child("New Connection"))
                     .child(
-                        Input::new(&self.form.name_input)
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .child(div().text_sm().child("Connection Name"))
+                            .child(Input::new(&self.form.name_input))
                     )
                     .child(
-                        Input::new(&self.form.conn_string_input)
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .child(div().text_sm().child("Database Type"))
+                            .child(
+                                div()
+                                    .flex()
+                                    .gap_4()
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .gap_1()
+                                            .items_center()
+                                            .cursor_pointer()
+                                            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| {
+                                                this.form.db_type = DatabaseType::Sqlite;
+                                                cx.notify();
+                                            }))
+                                            .child(
+                                                div()
+                                                    .w_4()
+                                                    .h_4()
+                                                    .border_1()
+                                                    .border_color(rgb(0x888888))
+                                                    .rounded(px(8.))
+                                                    .when(self.form.db_type == DatabaseType::Sqlite, |el| {
+                                                        el.child(
+                                                            div()
+                                                                .w_2()
+                                                                .h_2()
+                                                                .bg(rgb(0x0078d4))
+                                                                .rounded(px(4.))
+                                                                .m_1()
+                                                        )
+                                                    })
+                                            )
+                                            .child(div().text_sm().child("SQLite"))
+                                    )
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .gap_1()
+                                            .items_center()
+                                            .cursor_pointer()
+                                            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| {
+                                                this.form.db_type = DatabaseType::Postgres;
+                                                cx.notify();
+                                            }))
+                                            .child(
+                                                div()
+                                                    .w_4()
+                                                    .h_4()
+                                                    .border_1()
+                                                    .border_color(rgb(0x888888))
+                                                    .rounded(px(8.))
+                                                    .when(self.form.db_type == DatabaseType::Postgres, |el| {
+                                                        el.child(
+                                                            div()
+                                                                .w_2()
+                                                                .h_2()
+                                                                .bg(rgb(0x0078d4))
+                                                                .rounded(px(4.))
+                                                                .m_1()
+                                                        )
+                                                    })
+                                            )
+                                            .child(div().text_sm().child("PostgreSQL"))
+                                    )
+                            )
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .child(div().text_sm().child("Connection String"))
+                            .child(
+                                div()
+                                    .flex()
+                                    .gap_2()
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .child(Input::new(&self.form.conn_string_input))
+                                    )
+                                    .when(self.form.db_type == DatabaseType::Sqlite, |el| {
+                                        el.child(
+                                            Button::new("browse_file")
+                                                .label("Browse...")
+                                                .on_click(cx.listener(|_this, _, _, cx| {
+                                                    // Use async file dialog which doesn't require tokio runtime
+                                                    let async_cx = cx.to_async();
+                                                    cx.spawn(|this: WeakEntity<MainLayout>, _: &mut AsyncApp| async move {
+                                                        let mut cx = async_cx.clone();
+                                                        let file = rfd::AsyncFileDialog::new()
+                                                            .add_filter("SQLite Database", &["db", "sqlite", "sqlite3"])
+                                                            .pick_file()
+                                                            .await;
+                                                        
+                                                        if let Some(file) = file {
+                                                            let path_str = format!("sqlite://{}", file.path().display());
+                                                            let _ = this.update(&mut cx, |this, cx| {
+                                                                this.form.selected_path = Some(path_str);
+                                                                cx.notify();
+                                                            });
+                                                        }
+                                                    }).detach();
+                                                }))
+                                        )
+                                    })
+                            )
+                            .when_some(self.form.selected_path.as_ref(), |el, path| {
+                                el.child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(rgb(0x888888))
+                                        .child(format!("Selected: {}", path))
+                                )
+                            })
                     )
                     .child(
                         div()
@@ -93,7 +219,11 @@ impl MainLayout {
                                     .label("Save")
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         let name = this.form.name_input.read(cx).value().to_string();
-                                        let conn_string = this.form.conn_string_input.read(cx).value().to_string();
+                                        let conn_string = if let Some(ref path) = this.form.selected_path {
+                                            path.clone()
+                                        } else {
+                                            this.form.conn_string_input.read(cx).value().to_string()
+                                        };
                                         
                                         let config = ConnectionConfig {
                                             name,
@@ -104,6 +234,8 @@ impl MainLayout {
                                             state.connections.push(config);
                                             state.toggle_connecting(cx);
                                         });
+                                        // Reset form
+                                        this.form.selected_path = None;
                                     }))
                             )
                     )
