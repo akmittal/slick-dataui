@@ -27,7 +27,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1 libxkbcommon-x11-0
+        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxcursor-dev libxi-dev
 
     - name: Cache Cargo registry
       uses: actions/cache@v3

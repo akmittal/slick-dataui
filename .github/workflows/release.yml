@@ -22,7 +22,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev
+        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxcursor-dev libxi-dev
     - name: Run tests
       run: cargo test --verbose
 
@@ -53,7 +53,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev
+        sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxcursor-dev libxi-dev
 
     - name: Build Release
       run: cargo build --release
