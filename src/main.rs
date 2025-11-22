@@ -4,7 +4,6 @@ mod ui;
 mod table_delegate;
 
 use gpui::{Application, AppContext, WindowOptions};
-use gpui::prelude::*;
 use gpui_component::Root;
 use state::GlobalAppState;
 use ui::MainLayout;
@@ -15,7 +14,6 @@ fn main() {
     app.run(move |cx| {
         // This must be called before using any GPUI Component features.
         gpui_component::init(cx);
-        let app_state_model = cx.new(|_| state::AppState::new());
 
         cx.spawn(async move |cx| {
             cx.open_window(WindowOptions::default(), |window, cx| {

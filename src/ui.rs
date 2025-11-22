@@ -5,9 +5,10 @@ use crate::state::GlobalAppState;
 
 use gpui_component::input::{Input, InputState};
 use gpui_component::button::{Button, ButtonVariants};
-use gpui_component::table::{Table, TableState, TableDelegate, Column};
+use gpui_component::table::{Table, TableState};
+// (no extra trait imports needed)
 use crate::state::{DatabaseType, ConnectionConfig};
-use crate::db::{DatabaseClient, SqliteClient, PostgresClient, QueryResult};
+use crate::db::{DatabaseClient, SqliteClient, PostgresClient};
 use crate::table_delegate::QueryResultsDelegate;
 use std::sync::Arc;
 
@@ -25,8 +26,8 @@ impl ConnectionForm {
         C::Result<Entity<InputState>>: Into<Entity<InputState>>
     {
         Self {
-            name_input: cx.new(|cx| InputState::new(window, cx)).into(),
-            conn_string_input: cx.new(|cx| InputState::new(window, cx)).into(),
+            name_input: cx.new(|cx| InputState::new(window, cx).placeholder("Connection name")).into(),
+            conn_string_input: cx.new(|cx| InputState::new(window, cx).placeholder("Connection string or file")).into(),
             db_type: DatabaseType::Sqlite,
             selected_path: None,
         }
@@ -87,7 +88,10 @@ impl MainLayout {
                             .flex_col()
                             .gap_1()
                             .child(div().text_sm().child("Connection Name"))
-                            .child(Input::new(&self.form.name_input))
+                            .child(
+                                Input::new(&self.form.name_input)
+                                    .appearance(true)
+                            )
                     )
                     .child(
                         div()
@@ -96,69 +100,26 @@ impl MainLayout {
                             .gap_1()
                             .child(div().text_sm().child("Database Type"))
                             .child(
-                                div()
-                                    .flex()
-                                    .gap_4()
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .gap_1()
-                                            .items_center()
-                                            .cursor_pointer()
-                                            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| {
-                                                this.form.db_type = DatabaseType::Sqlite;
-                                                cx.notify();
-                                            }))
-                                            .child(
-                                                div()
-                                                    .w_4()
-                                                    .h_4()
-                                                    .border_1()
-                                                    .border_color(rgb(0x888888))
-                                                    .rounded(px(8.))
-                                                    .when(self.form.db_type == DatabaseType::Sqlite, |el| {
-                                                        el.child(
-                                                            div()
-                                                                .w_2()
-                                                                .h_2()
-                                                                .bg(rgb(0x0078d4))
-                                                                .rounded(px(4.))
-                                                                .m_1()
-                                                        )
-                                                    })
-                                            )
-                                            .child(div().text_sm().child("SQLite"))
-                                    )
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .gap_1()
-                                            .items_center()
-                                            .cursor_pointer()
-                                            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| {
-                                                this.form.db_type = DatabaseType::Postgres;
-                                                cx.notify();
-                                            }))
-                                            .child(
-                                                div()
-                                                    .w_4()
-                                                    .h_4()
-                                                    .border_1()
-                                                    .border_color(rgb(0x888888))
-                                                    .rounded(px(8.))
-                                                    .when(self.form.db_type == DatabaseType::Postgres, |el| {
-                                                        el.child(
-                                                            div()
-                                                                .w_2()
-                                                                .h_2()
-                                                                .bg(rgb(0x0078d4))
-                                                                .rounded(px(4.))
-                                                                .m_1()
-                                                        )
-                                                    })
-                                            )
-                                            .child(div().text_sm().child("PostgreSQL"))
-                                    )
+                                // Use gpui_component radio group to select DB type
+                                gpui_component::radio::RadioGroup::horizontal("db_type")
+                                    .selected_index(match self.form.db_type {
+                                        DatabaseType::Sqlite => Some(0),
+                                        DatabaseType::Postgres => Some(1),
+                                    })
+                                    .children(vec![
+                                        gpui_component::radio::Radio::new(0).label("SQLite"),
+                                        gpui_component::radio::Radio::new(1).label("PostgreSQL"),
+                                    ])
+                                    .on_click(cx.listener(|this, index, _, cx| {
+                                        // index is &usize
+                                        let idx = *index;
+                                        this.form.db_type = if idx == 0 {
+                                            DatabaseType::Sqlite
+                                        } else {
+                                            DatabaseType::Postgres
+                                        };
+                                        cx.notify();
+                                    }))
                             )
                     )
                     .child(
@@ -360,10 +321,48 @@ impl Render for MainLayout {
                                 div()
                                     .mt_4()
                                     .child("Tables")
-                                    .children(
-                                        self.state.0.read(cx).tables.iter().map(|table| {
-                                            div().child(table.name.clone()).ml_2()
-                                        })
+                                    .child(
+                                        gpui_component::collapsible::Collapsible::new()
+                                            .open(true)
+                                            .content(
+                                                div().children(
+                                                    self.state.0.read(cx).tables.iter().enumerate().map(|(i, table)| {
+                                                        let table = table.clone();
+                                                        let id = ("table", i);
+                                                        Button::new(id)
+                                                            .label(table.name.clone())
+                                                            .ml_2()
+                                                            .cursor_pointer()
+                                                            .on_click(cx.listener({
+                                                                let table = table.clone();
+                                                                move |this, event: &gpui::ClickEvent, _, cx| {
+                                                                    if event.click_count() != 2 { return; }
+
+                                                                    let app_state = this.state.0.clone();
+                                                                    let client_opt = this.state.0.read(cx).active_connection.clone();
+                                                                    let table_name = table.name.clone();
+
+                                                                    let async_cx = cx.to_async();
+                                                                    cx.spawn(|_, _: &mut AsyncApp| async move {
+                                                                        let mut cx = async_cx.clone();
+                                                                        if let Some(client) = client_opt {
+                                                                            let safe_name = table_name.replace('"', "\"\"");
+                                                                            let query = format!("SELECT * FROM \"{}\"", safe_name);
+                                                                            let result = client.execute_query(&query).await;
+                                                                            let _ = app_state.update(&mut cx, |state, cx| {
+                                                                                match result {
+                                                                                    Ok(res) => state.query_results = Some(res),
+                                                                                    Err(e) => state.error_message = Some(format!("Failed to fetch table data: {}", e)),
+                                                                                }
+                                                                                cx.notify();
+                                                                            });
+                                                                        }
+                                                                    }).detach();
+                                                                }
+                                                            }))
+                                                    })
+                                                )
+                                            )
                                     )
                             )
                     )
@@ -412,7 +411,7 @@ impl Render for MainLayout {
                                                 let client_opt = this.state.0.read(cx).active_connection.clone();
 
                                                 let async_cx = cx.to_async();
-                                                cx.spawn(|this_weak: WeakEntity<MainLayout>, _: &mut AsyncApp| async move {
+                                                cx.spawn(|_this_weak: WeakEntity<MainLayout>, _: &mut AsyncApp| async move {
                                                     let mut cx = async_cx.clone();
                                                     
                                                     if let Some(client) = client_opt {

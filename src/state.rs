@@ -1,8 +1,7 @@
-use gpui::prelude::*;
-use gpui::{AppContext, Context, Render, IntoElement, div, Window, Entity};
+use gpui::{Context, Render, IntoElement, div, Window, Entity};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::db::{DatabaseClient, SqliteClient, PostgresClient, Table, QueryResult};
+use crate::db::{DatabaseClient, Table, QueryResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DatabaseType {
@@ -23,7 +22,6 @@ pub struct AppState {
     pub active_connection_name: Option<String>,
     pub tables: Vec<Table>,
     pub query_results: Option<QueryResult>,
-    pub current_query: String,
     pub is_connecting: bool,
     pub error_message: Option<String>,
 }
@@ -36,7 +34,6 @@ impl AppState {
             active_connection_name: None,
             tables: vec![],
             query_results: None,
-            current_query: String::new(),
             is_connecting: false,
             error_message: None,
         }
@@ -59,11 +56,4 @@ impl GlobalAppState {
     pub fn new(entity: Entity<AppState>) -> Self {
         Self(entity)
     }
-}
-
-pub enum AppAction {
-    Connect(ConnectionConfig),
-    SetTables(Vec<Table>),
-    SetQueryResult(QueryResult),
-    SetError(String),
 }
