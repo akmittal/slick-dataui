@@ -77,3 +77,8 @@ cargo run
 ```bash
 cargo build --release
 ```
+
+## Contributing
+
+### AI Agents
+If you are an AI agent contributing to this project, please read [AI_GUIDELINES.md](AI_GUIDELINES.md) for architectural patterns and coding standards.
