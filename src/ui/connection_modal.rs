@@ -194,7 +194,7 @@ fn render_modal_actions(
                         connection_string: conn_string,
                     };
                     this.state.0.update(cx, |state, cx| {
-                        state.connections.push(config);
+                        state.add_connection(config);
                         state.toggle_connecting(cx);
                     });
                     this.form.selected_path = None;

@@ -1,5 +1,6 @@
 mod db;
 mod error;
+mod persistence;
 mod state;
 mod ui;
 mod table_delegate;

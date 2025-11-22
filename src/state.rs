@@ -28,8 +28,13 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
+        let connections = crate::persistence::load_connections().unwrap_or_else(|e| {
+            eprintln!("Failed to load connections: {}", e);
+            vec![]
+        });
+
         Self {
-            connections: vec![],
+            connections,
             active_connection: None,
             active_connection_name: None,
             tables: vec![],
@@ -38,6 +43,14 @@ impl AppState {
             error_message: None,
         }
     }
+
+    pub fn add_connection(&mut self, config: ConnectionConfig) {
+        self.connections.push(config);
+        if let Err(e) = crate::persistence::save_connections(&self.connections) {
+            eprintln!("Failed to save connections: {}", e);
+        }
+    }
+
 
     pub fn toggle_connecting(&mut self, _cx: &mut Context<Self>) {
         self.is_connecting = !self.is_connecting;

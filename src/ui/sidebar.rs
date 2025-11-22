@@ -24,6 +24,11 @@ fn render_sidebar_content(layout: &mut super::MainLayout, cx: &mut Context<super
         .gap_2()
         .child(render_connections_header(layout, cx))
         .children(render_connections_list(layout, cx))
+        .child(
+            div().when_some(layout.state.0.read(cx).error_message.clone(), |el, msg| {
+                el.my_2().text_sm().text_color(rgb(0xff5555)).child(msg)
+            }),
+        )
         .child(render_tables_section(layout, cx))
 }
 
@@ -66,12 +71,20 @@ fn render_connections_list(layout: &super::MainLayout, cx: &mut Context<super::M
                         let async_cx = cx.to_async();
                         cx.spawn(|_, _: &mut AsyncApp| async move {
                             let mut cx = async_cx.clone();
-                            let _ = app_state.update(&mut cx, |state, cx| {
-                                state.is_connecting = true;
-                                state.error_message = None;
+                            let _ = app_state.update(&mut cx, |_state, cx| {
                                 cx.notify();
                             });
 
+                            if conn.connection_string.is_empty() {
+                                let _ = app_state.update(&mut cx, |state, cx| {
+                                    state.is_connecting = false;
+                                    state.error_message = Some("Connection string/password missing. Please delete and re-create the connection.".to_string());
+                                    cx.notify();
+                                });
+                                return;
+                            }
+
+                            println!("Connecting to '{}' with string: '{}'", conn.name, conn.connection_string);
                             let client_result = match conn.db_type {
                                 DatabaseType::Sqlite => {
                                     SqliteClient::new(&conn.connection_string)
@@ -107,6 +120,7 @@ fn render_connections_list(layout: &super::MainLayout, cx: &mut Context<super::M
                                 Err(e) => {
                                     let _ = app_state.update(&mut cx, |state, cx| {
                                         state.is_connecting = false;
+                                        println!("Connection failed: {}", e);
                                         state.error_message = Some(format!("Failed to connect: {}", e));
                                         cx.notify();
                                     });

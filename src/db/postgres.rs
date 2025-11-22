@@ -11,11 +11,11 @@ pub struct PostgresClient {
 impl PostgresClient {
     pub async fn new(url: &str) -> Result<Self> {
         let url = url.to_string();
-        let pool = TOKIO_RUNTIME.block_on(async move {
+        let pool = TOKIO_RUNTIME.spawn(async move {
             PgPoolOptions::new()
                 .connect(&url)
                 .await
-        })?;
+        }).await??;
         Ok(Self { pool })
     }
 }
@@ -24,7 +24,7 @@ impl PostgresClient {
 impl DatabaseClient for PostgresClient {
     async fn get_tables(&self) -> Result<Vec<Table>> {
         let pool = self.pool.clone();
-        TOKIO_RUNTIME.block_on(async move {
+        TOKIO_RUNTIME.spawn(async move {
             let rows = sqlx::query("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'")
                 .fetch_all(&pool)
                 .await?;
@@ -35,13 +35,13 @@ impl DatabaseClient for PostgresClient {
             }).collect();
 
             Ok(tables)
-        })
+        }).await?
     }
 
     async fn get_columns(&self, table_name: &str) -> Result<Vec<Column>> {
         let pool = self.pool.clone();
         let table_name = table_name.to_string();
-        TOKIO_RUNTIME.block_on(async move {
+        TOKIO_RUNTIME.spawn(async move {
             let rows = sqlx::query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = $1")
                 .bind(&table_name)
                 .fetch_all(&pool)
@@ -55,13 +55,13 @@ impl DatabaseClient for PostgresClient {
             }).collect();
 
             Ok(columns)
-        })
+        }).await?
     }
 
     async fn execute_query(&self, query: &str) -> Result<QueryResult> {
         let pool = self.pool.clone();
         let query = query.to_string();
-        TOKIO_RUNTIME.block_on(async move {
+        TOKIO_RUNTIME.spawn(async move {
             let rows = sqlx::query(&query)
                 .fetch_all(&pool)
                 .await?;
@@ -83,6 +83,6 @@ impl DatabaseClient for PostgresClient {
             }
 
             Ok(QueryResult { columns, rows: result_rows })
-        })
+        }).await?
     }
 }
