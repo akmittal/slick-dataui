@@ -1,13 +1,16 @@
+use crate::db::{DatabaseClient, PostgresClient, SqliteClient};
+use crate::state::DatabaseType;
 /// Sidebar component: connections list and tables list.
 use gpui::prelude::*;
 use gpui::*;
 use gpui_component::button::Button;
 use gpui_component::collapsible::Collapsible;
 use std::sync::Arc;
-use crate::db::{DatabaseClient, SqliteClient, PostgresClient};
-use crate::state::DatabaseType;
 
-pub fn render_sidebar(layout: &mut super::MainLayout, cx: &mut Context<super::MainLayout>) -> impl IntoElement {
+pub fn render_sidebar(
+    layout: &mut super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> impl IntoElement {
     div()
         .w_64()
         .h_full()
@@ -16,7 +19,10 @@ pub fn render_sidebar(layout: &mut super::MainLayout, cx: &mut Context<super::Ma
         .child(render_sidebar_content(layout, cx))
 }
 
-fn render_sidebar_content(layout: &mut super::MainLayout, cx: &mut Context<super::MainLayout>) -> impl IntoElement {
+fn render_sidebar_content(
+    layout: &mut super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> impl IntoElement {
     div()
         .p_4()
         .flex()
@@ -32,7 +38,10 @@ fn render_sidebar_content(layout: &mut super::MainLayout, cx: &mut Context<super
         .child(render_tables_section(layout, cx))
 }
 
-fn render_connections_header(_layout: &mut super::MainLayout, cx: &mut Context<super::MainLayout>) -> impl IntoElement {
+fn render_connections_header(
+    _layout: &mut super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> impl IntoElement {
     div()
         .flex()
         .justify_between()
@@ -49,7 +58,10 @@ fn render_connections_header(_layout: &mut super::MainLayout, cx: &mut Context<s
         )
 }
 
-fn render_connections_list(layout: &super::MainLayout, cx: &mut Context<super::MainLayout>) -> Vec<impl IntoElement> {
+fn render_connections_list(
+    layout: &super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> Vec<impl IntoElement> {
     layout
         .state
         .0
@@ -134,18 +146,21 @@ fn render_connections_list(layout: &super::MainLayout, cx: &mut Context<super::M
         .collect()
 }
 
-fn render_tables_section(layout: &mut super::MainLayout, cx: &mut Context<super::MainLayout>) -> impl IntoElement {
-    div()
-        .mt_4()
-        .child("Tables")
-        .child(
-            Collapsible::new()
-                .open(true)
-                .content(render_tables_list(layout, cx)),
-        )
+fn render_tables_section(
+    layout: &mut super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> impl IntoElement {
+    div().mt_4().child("Tables").child(
+        Collapsible::new()
+            .open(true)
+            .content(render_tables_list(layout, cx)),
+    )
 }
 
-fn render_tables_list(layout: &mut super::MainLayout, cx: &mut Context<super::MainLayout>) -> impl IntoElement {
+fn render_tables_list(
+    layout: &mut super::MainLayout,
+    cx: &mut Context<super::MainLayout>,
+) -> impl IntoElement {
     div().children(
         layout
             .state
@@ -181,8 +196,12 @@ fn render_tables_list(layout: &mut super::MainLayout, cx: &mut Context<super::Ma
                                     let _ = app_state.update(&mut cx, |state, cx| {
                                         match result {
                                             Ok(res) => state.query_results = Some(res),
-                                            Err(e) => state.error_message =
-                                                Some(format!("Failed to fetch table data: {}", e)),
+                                            Err(e) => {
+                                                state.error_message = Some(format!(
+                                                    "Failed to fetch table data: {}",
+                                                    e
+                                                ))
+                                            }
                                         }
                                         cx.notify();
                                     });
@@ -192,5 +211,5 @@ fn render_tables_list(layout: &mut super::MainLayout, cx: &mut Context<super::Ma
                         }
                     }))
             }),
-        )
+    )
 }

@@ -1,7 +1,7 @@
-use gpui::{Context, Render, IntoElement, div, Window, Entity};
+use crate::db::{DatabaseClient, QueryResult, Table};
+use gpui::{Context, Entity, IntoElement, Render, Window, div};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::db::{DatabaseClient, Table, QueryResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DatabaseType {
@@ -50,7 +50,6 @@ impl AppState {
             eprintln!("Failed to save connections: {}", e);
         }
     }
-
 
     pub fn toggle_connecting(&mut self, _cx: &mut Context<Self>) {
         self.is_connecting = !self.is_connecting;

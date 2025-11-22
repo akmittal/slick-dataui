@@ -2,15 +2,23 @@ mod db;
 mod error;
 mod persistence;
 mod state;
-mod ui;
 mod table_delegate;
+mod ui;
 
-use gpui::{Application, AppContext, WindowOptions};
+use gpui::{AppContext, Application, WindowOptions};
 use gpui_component::Root;
 use state::GlobalAppState;
 use ui::MainLayout;
 
 fn main() {
+    let _guard = sentry::init((
+        option_env!("SENTRY_DSN"),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            ..Default::default()
+        },
+    ));
+
     let app = Application::new().with_assets(gpui_component_assets::Assets);
 
     app.run(move |cx| {

@@ -1,7 +1,7 @@
 // QueryResultsDelegate - implements TableDelegate for displaying SQL query results with sorting and pagination
-use gpui::{App, Window, IntoElement, Context};
-use gpui_component::table::{TableDelegate, Column, ColumnSort, TableState};
 use crate::db::QueryResult;
+use gpui::{App, Context, IntoElement, Window};
+use gpui_component::table::{Column, ColumnSort, TableDelegate, TableState};
 
 pub struct QueryResultsDelegate {
     pub results: QueryResult,
@@ -13,11 +13,11 @@ pub struct QueryResultsDelegate {
 impl QueryResultsDelegate {
     pub fn new(results: QueryResult) -> Self {
         // Create column definitions from query results
-        let columns = results.columns.iter().map(|col_name| {
-            Column::new(col_name, col_name)
-                .width(150.)
-                .sortable()
-        }).collect();
+        let columns = results
+            .columns
+            .iter()
+            .map(|col_name| Column::new(col_name, col_name).width(150.).sortable())
+            .collect();
 
         Self {
             results,
@@ -41,16 +41,28 @@ impl TableDelegate for QueryResultsDelegate {
         &self.columns[col_ix]
     }
 
-    fn render_td(&self, row_ix: usize, col_ix: usize, _: &mut Window, _: &mut App) -> impl IntoElement {
-        if let Some(row) = self.results.rows.get(row_ix) {
-            if let Some(cell) = row.get(col_ix) {
-                return cell.clone();
-            }
+    fn render_td(
+        &self,
+        row_ix: usize,
+        col_ix: usize,
+        _: &mut Window,
+        _: &mut App,
+    ) -> impl IntoElement {
+        if let Some(row) = self.results.rows.get(row_ix)
+            && let Some(cell) = row.get(col_ix)
+        {
+            return cell.clone();
         }
         String::new()
     }
 
-    fn perform_sort(&mut self, col_ix: usize, sort: ColumnSort, _: &mut Window, _: &mut Context<TableState<Self>>) {
+    fn perform_sort(
+        &mut self,
+        col_ix: usize,
+        sort: ColumnSort,
+        _: &mut Window,
+        _: &mut Context<TableState<Self>>,
+    ) {
         self.current_sort_col = Some(col_ix);
         self.current_sort_order = sort;
         self.sort_rows(col_ix, sort);
@@ -71,7 +83,7 @@ mod tests {
             ],
         };
         let delegate = QueryResultsDelegate::new(results);
-        
+
         // Can't easily check columns count without App, but we can check the struct fields
         assert_eq!(delegate.columns.len(), 2);
         assert_eq!(delegate.results.rows.len(), 2);
@@ -79,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_sorting() {
-         let results = QueryResult {
+        let results = QueryResult {
             columns: vec!["val".to_string()],
             rows: vec![
                 vec!["B".to_string()],
@@ -95,15 +107,15 @@ mod tests {
         // However, perform_sort takes &mut Window and &mut Context.
         // We can try to use `gpui::TestAppContext` if available, but setting it up might be complex.
         // Alternatively, we can refactor the sorting logic to be testable without Window/Context.
-        // For now, let's manually sort the rows to verify the logic we *would* use, 
+        // For now, let's manually sort the rows to verify the logic we *would* use,
         // or just skip the test that requires Window/Context and rely on the fact that we tested the logic in our head?
         // No, we should try to test it.
-        
+
         // Refactoring `perform_sort` to delegate to a helper that doesn't need Window/Context would be best.
         // But I can't change the trait signature.
         // I can add a helper method `sort_rows(&mut self, col_ix: usize, sort: ColumnSort)` and call it from `perform_sort`.
         // Then I can test `sort_rows`.
-        
+
         delegate.sort_rows(0, ColumnSort::Ascending);
         assert_eq!(delegate.results.rows[0][0], "A");
         assert_eq!(delegate.results.rows[1][0], "B");
@@ -118,7 +130,7 @@ mod tests {
 
 impl QueryResultsDelegate {
     pub fn sort_rows(&mut self, col_ix: usize, sort: ColumnSort) {
-         match sort {
+        match sort {
             ColumnSort::Ascending => {
                 self.results.rows.sort_by(|a, b| {
                     if let (Some(a_val), Some(b_val)) = (a.get(col_ix), b.get(col_ix)) {
@@ -140,7 +152,7 @@ impl QueryResultsDelegate {
             ColumnSort::Default => {
                 // Reset to original order (no sort applied)
                 // Note: To support this truly, we'd need to store the original order.
-                // The current implementation doesn't seem to support resetting to original order fully 
+                // The current implementation doesn't seem to support resetting to original order fully
                 // unless we store indices or a copy.
             }
         }
