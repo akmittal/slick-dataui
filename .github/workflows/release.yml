@@ -6,6 +6,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0  # Disable incremental compilation for CI (faster)
+  CARGO_NET_RETRY: 10
+  RUST_BACKTRACE: short
 
 permissions:
   contents: write
@@ -26,8 +29,10 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxcursor-dev libxi-dev
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --locked --verbose
 
   release:
     name: Build & Release
@@ -61,10 +66,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev pkg-config libssl-dev libxcb1-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxcursor-dev libxi-dev
 
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
+
     - name: Build Release
       env:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      run: cargo build --release
+      run: cargo build --release --locked
 
     - name: Package Binary (Linux)
       if: runner.os == 'Linux'
