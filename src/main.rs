@@ -9,8 +9,14 @@ use gpui::{Application, AppContext, WindowOptions};
 use gpui_component::Root;
 use state::GlobalAppState;
 use ui::MainLayout;
+use sentry;
 
 fn main() {
+    let _guard = sentry::init((option_env!("SENTRY_DSN"), sentry::ClientOptions {
+        release: sentry::release_name!(),
+        ..Default::default()
+    }));
+    
     let app = Application::new().with_assets(gpui_component_assets::Assets);
 
     app.run(move |cx| {
