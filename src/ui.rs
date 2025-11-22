@@ -5,8 +5,10 @@ use crate::state::GlobalAppState;
 
 use gpui_component::input::{Input, InputState};
 use gpui_component::button::{Button, ButtonVariants};
+use gpui_component::table::{Table, TableState, TableDelegate, Column};
 use crate::state::{DatabaseType, ConnectionConfig};
-use crate::db::{DatabaseClient, SqliteClient, PostgresClient};
+use crate::db::{DatabaseClient, SqliteClient, PostgresClient, QueryResult};
+use crate::table_delegate::QueryResultsDelegate;
 use std::sync::Arc;
 
 pub struct ConnectionForm {
@@ -410,14 +412,16 @@ impl Render for MainLayout {
                                                 let client_opt = this.state.0.read(cx).active_connection.clone();
 
                                                 let async_cx = cx.to_async();
-                                                cx.spawn(|_, _: &mut AsyncApp| async move {
+                                                cx.spawn(|this_weak: WeakEntity<MainLayout>, _: &mut AsyncApp| async move {
                                                     let mut cx = async_cx.clone();
                                                     
                                                     if let Some(client) = client_opt {
                                                         let result = client.execute_query(&query).await;
                                                         let _ = app_state.update(&mut cx, |state, cx| {
                                                             match result {
-                                                                Ok(res) => state.query_results = Some(res),
+                                                                Ok(res) => {
+                                                                    state.query_results = Some(res);
+                                                                },
                                                                 Err(e) => state.error_message = Some(format!("Query failed: {}", e)),
                                                             }
                                                             cx.notify();
@@ -432,34 +436,39 @@ impl Render for MainLayout {
                         div()
                             .flex_1()
                             .p_4()
-                            .child("Results")
+                            .flex()
+                            .flex_col()
+                            .gap_2()
+                            .child(
+                                div()
+                                    .text_sm()
+                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                    .child("Query Results")
+                            )
                             .child(
                                 if let Some(results) = &self.state.0.read(cx).query_results {
+                                    // Create table state from results
+                                    let delegate = QueryResultsDelegate::new(results.clone());
+                                    let table_state = cx.new(|cx| {
+                                        TableState::new(delegate, _window, cx)
+                                    });
+                                    
                                     div()
-                                        .flex()
-                                        .flex_col()
+                                        .flex_1()
                                         .child(
-                                            div()
-                                                .flex()
-                                                .children(
-                                                    results.columns.iter().map(|col| {
-                                                        div().w_32().border_1().child(col.clone())
-                                                    })
-                                                )
-                                        )
-                                        .children(
-                                            results.rows.iter().map(|row| {
-                                                div()
-                                                    .flex()
-                                                    .children(
-                                                        row.iter().map(|cell| {
-                                                            div().w_32().border_1().child(cell.clone())
-                                                        })
-                                                    )
-                                            })
+                                            Table::new(&table_state)
+                                                .stripe(true)  // Alternating row colors
+                                                .bordered(true)  // Border around table
+                                                .scrollbar_visible(true, true)  // Vertical and horizontal scrollbars
                                         )
                                 } else {
-                                    div().child("No results")
+                                    div()
+                                        .flex_1()
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .text_color(rgb(0x888888))
+                                        .child("No results yet. Run a query to see results here.")
                                 }
                             )
                     )

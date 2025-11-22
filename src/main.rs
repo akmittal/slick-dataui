@@ -1,9 +1,9 @@
 mod db;
 mod state;
 mod ui;
+mod table_delegate;
 
-use gpui::*;
-use gpui::{AppContext, Context};
+use gpui::{Application, AppContext, WindowOptions};
 use gpui::prelude::*;
 use gpui_component::Root;
 use state::GlobalAppState;
